@@ -23,20 +23,35 @@ class ResumeProcessor:
 
     Attributes:
         file_path (str | Path): Absolute or relative path to the resume file.
+        top_n (int | None): Number of top keywords to extract. Defaults to 10.
+        text (str): Raw text content of the resume.
+        tokens (list[str]): List of cleaned and lemmatized tokens.
+        keywords (list[tuple[str, int]]): List of tuples containing keywords and their
+            frequencies.
     """
 
-    def __init__(self, file_path, top_n=10) -> None:
-        """Initialize the ResumeProcessor with necessary NLTK resources."""
+    def __init__(self, file_path: str | Path, top_n: int | None = 10) -> None:
+        """Initialize the ResumeProcessor with necessary NLTK resources.
+
+        Args:
+            file_path (str | Path): Path to the resume file.
+            top_n (int | None): Number of top keywords to extract. Defaults to 10."""
         self.stop_words = set(stopwords.words("english"))
         self.lemmatizer = WordNetLemmatizer()
+
+        if file_path is None:
+            raise ValueError(
+                "File path cannot be None, please provide a valid path as string or Path."
+            )
+
         self.file_path = file_path
         self.top_n = top_n
 
-        self.text = self.load_resume(self.file_path)
-        self.tokens = self.clean_text(self.text)
-        self.keywords = self.extract_keywords(self.tokens, top_n=self.top_n)
+        self.text: str = self.load_resume()
+        self.tokens: list[str] = self.clean_text()
+        self.keywords = self.extract_keywords()
 
-    def load_resume(self, file_path: str | Path) -> str:
+    def load_resume(self) -> str:
         """Load and extract plain text from a resume file (.txt or .pdf).
 
         Returns:
@@ -69,7 +84,7 @@ class ResumeProcessor:
             msg = "Unsupported file format. Please use .txt or .pdf"
             raise ValueError(msg)
 
-    def clean_text(self, text: str) -> list[str]:
+    def clean_text(self) -> list[str]:
         """Clean and normalize resume text for NLP processing.
 
         Processing steps:
@@ -85,7 +100,7 @@ class ResumeProcessor:
         Returns:
             list[str]: List of cleaned and lemmatized word tokens.
         """
-        text = text.lower()
+        text = self.text.lower()
         text = re.sub(r"[^\w\s]", " ", text)
         tokens = word_tokenize(text)
         tokens = [word for word in tokens if word.isalpha()]
@@ -93,16 +108,23 @@ class ResumeProcessor:
         return [self.lemmatizer.lemmatize(token) for token in tokens]
 
     def extract_keywords(
-        self, tokens: list[str], top_n: int = 10
+        self,
     ) -> list[tuple[str, int]]:
         """Identify and return the top N most frequent keywords from tokenized text.
 
         Args:
             tokens (list[str]): List of cleaned, lemmatized tokens.
-            top_n (int, optional): Number of top keywords to return. Defaults to 10.
 
         Returns:
             list[tuple[str, int]]: A list of (keyword, frequency) tuples.
         """
-        counter = Counter(tokens)
-        return counter.most_common(top_n)
+        counter = Counter(self.tokens)
+        return counter.most_common(self.top_n)
+
+    def keywords_preview(self) -> str:
+        """Return a preview of the top N keywords and their frequencies.
+
+        Returns:
+            str: A formatted string of the top N keywords and their frequencies.
+        """
+        return "\n".join(f"{word}: {freq}" for word, freq in self.keywords)

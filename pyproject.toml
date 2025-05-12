@@ -40,7 +40,7 @@ extend-include = ["*.ipynb"]
 select = [
     "ALL", # include all the rules, including new ones
 ]
-ignore = []
+ignore = ["D100",   # Do not document public modules]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
