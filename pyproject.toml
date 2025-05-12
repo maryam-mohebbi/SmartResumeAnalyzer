@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "Smart Resume Analyzer"
+version = "0.1.0"
+description = "A system that can automatically analyze and extract insights from resumes (CVs), match them to job descriptions, and rank them based on relevance."
+authors = ["Maryam Mohebi <maryam@mohebi.me>"]
+readme = "README.md"
+packages = [{ include = "sra" }]
+
+[tool.poetry.dependencies]
+python = ">=3.10,<3.11"
+nltk = "^3.9.1"
+spacy = "^3.8.5"
+pandas = "^2.2.3"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
