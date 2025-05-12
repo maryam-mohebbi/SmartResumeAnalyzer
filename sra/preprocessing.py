@@ -1,6 +1,6 @@
-import os
 import re
 from collections import Counter
+from pathlib import Path
 
 import nltk
 import pdfplumber
@@ -39,10 +39,10 @@ class ResumeProcessor:
         Raises:
             ValueError: If the file format is not supported (only .txt and .pdf are allowed).
         """
-        ext = os.path.splitext(file_path)[1].lower()
+        ext = Path(file_path).suffix.lower()
 
         if ext == ".txt":
-            with open(file_path, encoding="utf-8") as f:
+            with Path(file_path).open(encoding="utf-8") as f:
                 return f.read()
 
         elif ext == ".pdf":
@@ -55,7 +55,8 @@ class ResumeProcessor:
             return text
 
         else:
-            raise ValueError("Unsupported file format. Please use .txt or .pdf")
+            msg = "Unsupported file format. Please use .txt or .pdf"
+            raise ValueError(msg)
 
     def clean_text(self, text: str) -> list[str]:
         """Clean and normalize resume text for NLP processing.
@@ -78,8 +79,7 @@ class ResumeProcessor:
         tokens = word_tokenize(text)
         tokens = [word for word in tokens if word.isalpha()]
         tokens = [word for word in tokens if word not in self.stop_words]
-        lemmatized = [self.lemmatizer.lemmatize(token) for token in tokens]
-        return lemmatized
+        return [self.lemmatizer.lemmatize(token) for token in tokens]
 
     def extract_keywords(self, tokens: list[str], top_n: int = 10) -> list[tuple[str, int]]:
         """Identify and return the top N most frequent keywords from tokenized text.
