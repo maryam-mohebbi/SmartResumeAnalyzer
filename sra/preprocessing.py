@@ -20,18 +20,24 @@ class ResumeProcessor:
     - Preprocess and clean the text (lowercasing, punctuation removal, tokenization,
       stopword removal, and lemmatization)
     - Extract the most frequent keywords from the processed text
+
+    Attributes:
+        file_path (str | Path): Absolute or relative path to the resume file.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, file_path, top_n=10) -> None:
         """Initialize the ResumeProcessor with necessary NLTK resources."""
         self.stop_words = set(stopwords.words("english"))
         self.lemmatizer = WordNetLemmatizer()
+        self.file_path = file_path
+        self.top_n = top_n
 
-    def load_resume(self, file_path: str) -> str:
+        self.text = self.load_resume(self.file_path)
+        self.tokens = self.clean_text(self.text)
+        self.keywords = self.extract_keywords(self.tokens, top_n=self.top_n)
+
+    def load_resume(self, file_path: str | Path) -> str:
         """Load and extract plain text from a resume file (.txt or .pdf).
-
-        Args:
-            file_path (str): Absolute or relative path to the resume file.
 
         Returns:
             str: Extracted plain text content.
@@ -39,6 +45,11 @@ class ResumeProcessor:
         Raises:
             ValueError: If the file format is not supported (only .txt and .pdf are allowed).
         """
+
+        file_path = (
+            self.file_path if isinstance(self.file_path, Path) else str(self.file_path)
+        )
+
         ext = Path(file_path).suffix.lower()
 
         if ext == ".txt":
@@ -81,7 +92,9 @@ class ResumeProcessor:
         tokens = [word for word in tokens if word not in self.stop_words]
         return [self.lemmatizer.lemmatize(token) for token in tokens]
 
-    def extract_keywords(self, tokens: list[str], top_n: int = 10) -> list[tuple[str, int]]:
+    def extract_keywords(
+        self, tokens: list[str], top_n: int = 10
+    ) -> list[tuple[str, int]]:
         """Identify and return the top N most frequent keywords from tokenized text.
 
         Args:
