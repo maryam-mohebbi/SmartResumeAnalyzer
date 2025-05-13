@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import re
 from collections import Counter
 from pathlib import Path
@@ -7,6 +9,8 @@ import pdfplumber
 from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
 from nltk.tokenize import word_tokenize
+
+from sra.utility import get_logger
 
 # Ensure nltk data path and lazy download
 nltk.data.path.append("./nltk_data")
@@ -35,13 +39,15 @@ class ResumeProcessor:
 
         Args:
             file_path (str | Path): Path to the resume file.
-            top_n (int | None): Number of top keywords to extract. Defaults to 10."""
+            top_n (int | None): Number of top keywords to extract. Defaults to 10.
+        """
         self.stop_words = set(stopwords.words("english"))
         self.lemmatizer = WordNetLemmatizer()
 
         if file_path is None:
+            msg = "File path cannot be None, please provide a valid path as string or Path."
             raise ValueError(
-                "File path cannot be None, please provide a valid path as string or Path."
+                msg,
             )
 
         self.file_path = file_path
@@ -60,10 +66,7 @@ class ResumeProcessor:
         Raises:
             ValueError: If the file format is not supported (only .txt and .pdf are allowed).
         """
-
-        file_path = (
-            self.file_path if isinstance(self.file_path, Path) else str(self.file_path)
-        )
+        file_path = self.file_path if isinstance(self.file_path, Path) else str(self.file_path)
 
         ext = Path(file_path).suffix.lower()
 
@@ -128,3 +131,37 @@ class ResumeProcessor:
             str: A formatted string of the top N keywords and their frequencies.
         """
         return "\n".join(f"{word}: {freq}" for word, freq in self.keywords)
+
+
+def folder_resume_processor(
+    folder_path: str | Path,
+    top_n: int | None = None,
+) -> list[tuple[str, list[tuple[str, int]]]]:
+    """Process all resumes in a folder and extract top keywords.
+
+    Args:
+        folder_path (str | Path): Path to the folder containing resume files.
+        top_n (int | None): Number of top keywords to extract from each resume. Defaults to None.
+
+    Returns:
+        list[tuple[str, list[tuple[str, int]]]]: A list of tuples where each tuple contains
+            the file name and a list of (keyword, frequency) pairs.
+    """
+    logger = get_logger("Folder Resume Processor")
+
+    folder = Path(folder_path)
+    if not folder.exists():
+        msg = "Folder does not exist: %s", folder_path
+        raise ValueError(msg)
+
+    resume_files = list(folder.glob("*.pdf")) + list(folder.glob("*.txt"))
+    logger.info("Found %s resume(s) in folder: %s\n", len(resume_files), {folder_path})
+
+    results = []
+    for file_path in resume_files:
+        logger.info("Processing: %s", file_path.name)
+        processor = ResumeProcessor(file_path, top_n=top_n)
+        logger.info("\n%s", processor.keywords_preview())
+        results.append((file_path.name, processor.keywords))
+
+    return results
