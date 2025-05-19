@@ -6,14 +6,18 @@ from pathlib import Path
 
 import nltk
 import pdfplumber
+import spacy
 from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
 from nltk.tokenize import word_tokenize
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
 
 from sra.utility import get_logger
 
 # Ensure nltk data path and lazy download
 nltk.data.path.append("./nltk_data")
+nlp = spacy.load("en_core_web_sm")
 
 SKILL_SET = {
     "python",
@@ -78,6 +82,8 @@ class ResumeProcessor:
         self.text: str = self.load_resume()
         self.tokens: list[str] = self.clean_text()
         self.keywords = self.extract_keywords()
+
+        self.spacy_doc = nlp(self.text)
 
     def load_resume(self) -> str:
         """Load and extract plain text from a resume file (.txt or .pdf).
@@ -211,6 +217,14 @@ class ResumeProcessor:
         found = [skill for skill in SKILL_SET if skill in text]
         return sorted(found)
 
+    def extract_pos_tags(self) -> list[tuple[str, str]]:
+        """Return a list of tokens with their POS tags."""
+        return [(token.text, token.pos_) for token in self.spacy_doc]
+
+    def extract_named_entities(self) -> list[tuple[str, str]]:
+        """Return named entities with their labels."""
+        return [(ent.text, ent.label_) for ent in self.spacy_doc.ents]
+
 
 def folder_resume_processor(
     folder_path: str | Path,
@@ -244,3 +258,11 @@ def folder_resume_processor(
         results.append((file_path.name, processor.keywords))
 
     return results
+
+
+def compute_tfidf_similarity(texts: list[str], query: str) -> list[tuple[int, float]]:
+    """Compute cosine similarity between a query and documents using TF-IDF."""
+    vectorizer = TfidfVectorizer()
+    tfidf_matrix = vectorizer.fit_transform([query, *texts])
+    similarities = cosine_similarity(tfidf_matrix[0:1], tfidf_matrix[1:]).flatten()
+    return sorted(enumerate(similarities), key=lambda x: x[1], reverse=True)
