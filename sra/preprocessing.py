@@ -6,6 +6,7 @@ from pathlib import Path
 
 import nltk
 import pdfplumber
+import spacy
 from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
 from nltk.tokenize import word_tokenize
@@ -14,6 +15,7 @@ from sra.utility import get_logger
 
 # Ensure nltk data path and lazy download
 nltk.data.path.append("./nltk_data")
+nlp = spacy.load("en_core_web_sm")
 
 SKILL_SET = {
     "python",
@@ -78,6 +80,8 @@ class ResumeProcessor:
         self.text: str = self.load_resume()
         self.tokens: list[str] = self.clean_text()
         self.keywords = self.extract_keywords()
+
+        self.spacy_doc = nlp(self.text)
 
     def load_resume(self) -> str:
         """Load and extract plain text from a resume file (.txt or .pdf).
@@ -210,6 +214,14 @@ class ResumeProcessor:
         text = " ".join(self.tokens)
         found = [skill for skill in SKILL_SET if skill in text]
         return sorted(found)
+
+    def extract_pos_tags(self) -> list[tuple[str, str]]:
+        """Return a list of tokens with their POS tags."""
+        return [(token.text, token.pos_) for token in self.spacy_doc]
+
+    def extract_named_entities(self) -> list[tuple[str, str]]:
+        """Return named entities with their labels."""
+        return [(ent.text, ent.label_) for ent in self.spacy_doc.ents]
 
 
 def folder_resume_processor(
