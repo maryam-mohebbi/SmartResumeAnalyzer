@@ -10,6 +10,8 @@ import spacy
 from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
 from nltk.tokenize import word_tokenize
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
 
 from sra.utility import get_logger
 
@@ -256,3 +258,11 @@ def folder_resume_processor(
         results.append((file_path.name, processor.keywords))
 
     return results
+
+
+def compute_tfidf_similarity(texts: list[str], query: str) -> list[tuple[int, float]]:
+    """Compute cosine similarity between a query and documents using TF-IDF."""
+    vectorizer = TfidfVectorizer()
+    tfidf_matrix = vectorizer.fit_transform([query, *texts])
+    similarities = cosine_similarity(tfidf_matrix[0:1], tfidf_matrix[1:]).flatten()
+    return sorted(enumerate(similarities), key=lambda x: x[1], reverse=True)
