@@ -15,6 +15,28 @@ from sra.utility import get_logger
 # Ensure nltk data path and lazy download
 nltk.data.path.append("./nltk_data")
 
+SKILL_SET = {
+    "python",
+    "java",
+    "c++",
+    "sql",
+    "machine learning",
+    "data analysis",
+    "deep learning",
+    "nlp",
+    "pandas",
+    "numpy",
+    "git",
+    "tensorflow",
+    "pytorch",
+    "aws",
+    "docker",
+    "linux",
+    "excel",
+    "power bi",
+    "flask",
+}
+
 
 class ResumeProcessor:
     """A utility class for processing resume files in .txt or .pdf format.
@@ -131,6 +153,63 @@ class ResumeProcessor:
             str: A formatted string of the top N keywords and their frequencies.
         """
         return "\n".join(f"{word}: {freq}" for word, freq in self.keywords)
+
+    def get_section_checklist(self) -> dict[str, str]:
+        """Check for the presence of key resume sections such as Email, Name, Skills, Education, Work Experience, and Projects.
+
+        Returns:
+            dict[str, str]: A dictionary indicating whether each section is found or likely present in the resume.
+        """
+        checklist = {}
+
+        text_lower = self.text.lower()
+
+        # Email
+        if re.search(r"[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+", self.text):
+            checklist["Email"] = "Found"
+        else:
+            checklist["Email"] = "Not Found"
+
+        # Name - only check if there's a line starting with "name"
+        checklist["Name"] = "Likely Present" if re.search(r"\bname\s*:", text_lower) else "Unknown"
+
+        # Skills - check for section header or at least 3 matched skills
+        skills = self.match_skills()
+        min_skills = 3
+        if "skills" in text_lower or len(skills) >= min_skills:
+            checklist["Skills"] = "Found"
+        else:
+            checklist["Skills"] = "Not Found"
+
+        # Education - look for common phrases
+        if re.search(r"\b(bachelor|master|ph\.?d|education|university|college|b\.sc|m\.sc)\b", text_lower):
+            checklist["Education"] = "Found"
+        else:
+            checklist["Education"] = "Not Found"
+
+        # Experience - look for work, job, or company-related keywords
+        if re.search(r"\b(experience|work|intern|employment|company)\b", text_lower):
+            checklist["Work Experience"] = "Found"
+        else:
+            checklist["Work Experience"] = "Not Found"
+
+        # Projects - optional, but common in tech CVs
+        if "project" in text_lower:
+            checklist["Projects"] = "Found"
+        else:
+            checklist["Projects"] = "Not Found"
+
+        return checklist
+
+    def match_skills(self) -> list[str]:
+        """Match known skills against the resume text.
+
+        Returns:
+            list[str]: Detected skills.
+        """
+        text = " ".join(self.tokens)
+        found = [skill for skill in SKILL_SET if skill in text]
+        return sorted(found)
 
 
 def folder_resume_processor(
