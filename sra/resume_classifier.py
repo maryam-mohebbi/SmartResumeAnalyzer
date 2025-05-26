@@ -1,6 +1,7 @@
 import pandas as pd
 import torch
 from datasets import Dataset
+from sklearn.model_selection import train_test_split
 from transformers import BertForSequenceClassification, BertTokenizerFast, Trainer, TrainingArguments
 
 
@@ -85,6 +86,24 @@ class ResumeClassifier:
 
         trainer.train()
         self.trainer = trainer
+
+    def train_from_dataframe(self, df: pd.DataFrame, validation_split: float = 0.2, output_dir: str = "resume-bert-classifier"):
+        """Train directly from a pandas DataFrame."""
+        # Ensure label mapping exists
+        if not self.label2id:
+            self.labels = df["label"].unique().tolist()
+            self.label2id = {label: i for i, label in enumerate(self.labels)}
+            self.id2label = {i: label for label, i in self.label2id.items()}
+
+        # Split DataFrame
+        train_df, eval_df = train_test_split(df, test_size=validation_split, stratify=df["label"], random_state=42)
+
+        # Convert to HuggingFace datasets
+        train_dataset = self.prepare_dataset(train_df)
+        eval_dataset = self.prepare_dataset(eval_df)
+
+        # Train using existing logic
+        self.train(train_dataset, eval_dataset=eval_dataset, output_dir=output_dir)
 
     def predict(self, texts: list[str]) -> list[str]:
         # Get the device the model is on
